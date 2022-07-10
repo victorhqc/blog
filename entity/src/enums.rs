@@ -6,3 +6,10 @@ pub enum Role {
     Writer,
     Editor,
 }
+
+#[derive(Display, PartialEq, EnumString, AsRefStr)]
+pub enum Status {
+    Published,
+    Disabled,
+    Draft,
+}

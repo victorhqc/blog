@@ -1,0 +1,12 @@
+
+[default]
+port = 7878
+ident = "blog-api"
+log_level = "debug"
+secret_key = "my_super_secret_key_$@"
+
+[default.limits]
+graphql = "10MiB"
+
+[default.databases.blog_api]
+url = "sqlite://blog.db"

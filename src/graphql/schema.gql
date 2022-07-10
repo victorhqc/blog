@@ -1,0 +1,54 @@
+
+input ChangeRoleInput {
+	uuid: String!
+	role: Role!
+}
+
+
+
+
+input LoginInput {
+	email: String!
+	password: String!
+}
+
+type MutationRoot {
+	firstUser(input: UserInput!): User!
+	newUser(input: UserInput!): User!
+	changeRole(input: ChangeRoleInput!): User!
+	login(input: LoginInput!): Token!
+}
+
+type QueryRoot {
+	user(uuid: String!): User
+}
+
+enum Role {
+	ADMIN
+	WRITER
+	EDITOR
+}
+
+
+type Token {
+	token: String!
+}
+
+type User {
+	uuid: ID!
+	email: String!
+	role: Role!
+	createdAt: String!
+	updatedAt: String!
+}
+
+input UserInput {
+	email: String!
+	password: String!
+	passwordConfirmation: String!
+}
+
+schema {
+	query: QueryRoot
+	mutation: MutationRoot
+}

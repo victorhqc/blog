@@ -193,6 +193,43 @@ mod post_tags {
     }
 }
 
+mod uploads {
+    use crate::uploads::{ActiveModel, Model};
+    use sea_orm::entity::prelude::*;
+    use sea_orm::ActiveValue::Set;
+    use uuid::Uuid;
+
+    impl ActiveModelBehavior for ActiveModel {
+        fn new() -> Self {
+            let uuid = Uuid::new_v4().as_bytes().to_vec();
+
+            Self {
+                uuid: Set(uuid),
+                ..ActiveModelTrait::default()
+            }
+        }
+    }
+
+    impl Model {
+        pub fn default(uuid: Uuid) -> Self {
+            let now = super::get_now();
+
+            Model {
+                uuid: uuid.as_bytes().to_vec(),
+                content_type: String::from(""),
+                filename: String::from(""),
+                s3_key: String::from(""),
+                created_at: now,
+                updated_at: now,
+            }
+        }
+
+        pub fn uuid(&self) -> [u8; 16] {
+            super::get_uuid_bytes(&self.uuid)
+        }
+    }
+}
+
 fn get_now() -> DateTime<Utc> {
     Utc::now()
 }

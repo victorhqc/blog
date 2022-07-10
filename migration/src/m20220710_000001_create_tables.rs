@@ -73,10 +73,23 @@ impl MigrationTrait for Migration {
         "#;
         let post_tags = Statement::from_string(backend, sql.to_owned());
 
+        let sql = r#"
+        CREATE TABLE `uploads` (
+            uuid BLOB PRIMARY KEY NOT NULL,
+            filename TEXT NOT NULL,
+            content_type TEXT NOT NULL,
+            s3_key TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT current_timestamp NOT NULL,
+            updated_at TIMESTAMP DEFAULT current_timestamp NOT NULL
+        );
+        "#;
+        let uploads = Statement::from_string(backend, sql.to_owned());
+
         conn.execute(users).await?;
         conn.execute(tags).await?;
         conn.execute(posts).await?;
         conn.execute(post_tags).await?;
+        conn.execute(uploads).await?;
 
         Ok(())
     }
@@ -84,6 +97,11 @@ impl MigrationTrait for Migration {
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let backend = manager.get_database_backend();
         let conn = manager.get_connection();
+
+        let sql = r#"
+        DROP TABLE `uploads`;
+        "#;
+        let uploads = Statement::from_string(backend, sql.to_owned());
 
         let sql = r#"
         DROP TABLE `post_tags`;
@@ -105,6 +123,7 @@ impl MigrationTrait for Migration {
         "#;
         let users = Statement::from_string(backend, sql.to_owned());
 
+        conn.execute(uploads).await?;
         conn.execute(post_tags).await?;
         conn.execute(posts).await?;
         conn.execute(tags).await?;

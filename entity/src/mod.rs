@@ -6,4 +6,5 @@ pub mod post_tags;
 pub mod posts;
 pub mod seaql_migrations;
 pub mod tags;
+pub mod uploads;
 pub mod users;

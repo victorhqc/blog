@@ -58,7 +58,7 @@ pub fn get_figment_before_build() -> Figment {
     Figment::from(default_config)
         .merge(Serialized::defaults(rocket::Config::default()))
         .merge(Toml::file("Rocket.toml").nested())
-        .focus("databases.photos_api")
+        .focus("databases.blog_api")
         .merge(Serialized::default("max_connections", workers * 4))
         .merge(Serialized::default("connect_timeout", 5))
 }

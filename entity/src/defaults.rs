@@ -70,6 +70,10 @@ mod users {
                 updated_at: now,
             }
         }
+
+        pub fn uuid(&self) -> [u8; 16] {
+            super::get_uuid_bytes(&self.uuid)
+        }
     }
 }
 
@@ -112,6 +116,10 @@ mod posts {
                 updated_at: now,
             }
         }
+
+        pub fn uuid(&self) -> [u8; 16] {
+            super::get_uuid_bytes(&self.uuid)
+        }
     }
 }
 
@@ -146,6 +154,10 @@ mod tags {
                 updated_at: now,
             }
         }
+
+        pub fn uuid(&self) -> [u8; 16] {
+            super::get_uuid_bytes(&self.uuid)
+        }
     }
 }
 
@@ -174,9 +186,23 @@ mod post_tags {
                 tag_uuid: Uuid::new_v4().as_bytes().to_vec(),
             }
         }
+
+        pub fn uuid(&self) -> [u8; 16] {
+            super::get_uuid_bytes(&self.uuid)
+        }
     }
 }
 
 fn get_now() -> DateTime<Utc> {
     Utc::now()
+}
+
+fn get_uuid_bytes(id: &Vec<u8>) -> [u8; 16] {
+    let mut uuid: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    for (index, byte) in id.iter().enumerate() {
+        uuid[index] = byte.clone();
+    }
+
+    uuid
 }

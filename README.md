@@ -22,10 +22,23 @@ it needs to have a client facing UI as well as an admin UI for managing the post
 
 Start by copying the `.env.example` and make a new `.env` file based on that. Then the DB generation
 is possible. But maybe it's necessary to make a new empty file such as `blog.db` to be able to run
-the migrations.
+the migrations, which happen automatically when the server starts running.
 
 ```bash
+cargo watch -x run -i schema.gql
+```
+
+Alternatively, the migrations are able to run without the server by running the following command
+
+```bash
+# To apply migrations
 cargo run --package migration -- up
+
+# To rollback a migration
+cargo run --package migration -- down
+
+# To rollball all migrations and run them again
+cargo run --package migration -- refresh
 ```
 
 ### New migrations

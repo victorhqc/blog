@@ -8,7 +8,7 @@ edition = "2021"
 members = [".", "entity", "migration"]
 
 [dependencies]
-async-graphql ={ version = "4.0.1", features = ["uuid", "dataloader"] }
+async-graphql ={ version = "4.0.1", features = ["uuid", "dataloader", "chrono"] }
 async-graphql-rocket = "4.0.1"
 async-mutex = "1.4"
 async-std = "1.11.0"

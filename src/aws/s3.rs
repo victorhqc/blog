@@ -13,9 +13,6 @@ pub async fn upload_object(
     content_type: Option<String>,
 ) -> Result<PutObjectOutput, Error> {
     let body = ByteStream::from(file_data);
-    // TODO: Encrypt photos in S3
-    // https://docs.rs/aws-sdk-s3/0.12.0/aws_sdk_s3/client/fluent_builders/struct.PutObject.html#method.server_side_encryption
-    // https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingServerSideEncryption.html
     let response = client
         .put_object()
         .bucket(bucket_name)

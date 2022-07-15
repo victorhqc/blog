@@ -219,6 +219,7 @@ mod uploads {
                 content_type: String::from(""),
                 filename: String::from(""),
                 s3_key: String::from(""),
+                created_by: Uuid::new_v4().as_bytes().to_vec(),
                 created_at: now,
                 updated_at: now,
             }
@@ -226,6 +227,10 @@ mod uploads {
 
         pub fn uuid(&self) -> [u8; 16] {
             super::get_uuid_bytes(&self.uuid)
+        }
+
+        pub fn created_by(&self) -> [u8; 16] {
+            super::get_uuid_bytes(&self.created_by)
         }
     }
 }

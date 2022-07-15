@@ -79,8 +79,13 @@ impl MigrationTrait for Migration {
             filename TEXT NOT NULL,
             content_type TEXT NOT NULL,
             s3_key TEXT NOT NULL,
+            created_by BLOB NOT NULL,
             created_at TIMESTAMP DEFAULT current_timestamp NOT NULL,
-            updated_at TIMESTAMP DEFAULT current_timestamp NOT NULL
+            updated_at TIMESTAMP DEFAULT current_timestamp NOT NULL,
+            FOREIGN KEY (created_by)
+            REFERENCES users (uuid)
+                ON DELETE CASCADE
+                ON UPDATE CASCADE
         );
         "#;
         let uploads = Statement::from_string(backend, sql.to_owned());

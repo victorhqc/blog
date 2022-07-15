@@ -15,6 +15,7 @@ pub enum Resource {
     Post,
     Tag,
     User,
+    File,
 }
 
 #[derive(Eq, PartialEq, Display)]

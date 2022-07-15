@@ -18,7 +18,7 @@ pub struct FileUpload {
 impl From<uploads::Model> for FileUpload {
     fn from(file_upload: uploads::Model) -> Self {
         let uuid = Uuid::from_bytes(file_upload.uuid());
-        let created_by = Uuid::from_bytes(file_upload.created_by());
+        // let created_by = Uuid::from_bytes(file_upload.created_by());
 
         FileUpload {
             uuid: uuid.into(),

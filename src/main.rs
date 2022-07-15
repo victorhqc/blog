@@ -51,7 +51,6 @@ async fn main() -> Result<(), rocket::Error> {
     let app_loader = AppLoader::new(&pool);
 
     let context = AppContext {
-        pool,
         enforcer: Arc::new(Mutex::new(enforcer)),
         aws,
     };

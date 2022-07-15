@@ -1,8 +1,10 @@
-use crate::authorization::graphql::{Action, Resource, RoleGuard};
-use crate::graphql::context::get_pool_from_context;
-use crate::user::{
-    graphql::{Role, User},
-    ChangeRoleInput as ChangeRoleRepositoryInput, UserRepository, UserRepositoryInput,
+use crate::{
+    authorization::graphql::{Action, Resource, RoleGuard},
+    graphql::context::get_conn_from_context,
+    user::{
+        graphql::{Role, User},
+        ChangeRoleInput as ChangeRoleRepositoryInput, UserRepository, UserRepositoryInput,
+    },
 };
 use async_graphql::*;
 use entity::enums::Role as UserRole;
@@ -29,9 +31,9 @@ pub struct UserMutation;
 #[Object]
 impl UserMutation {
     pub async fn first_user(&self, ctx: &Context<'_>, input: UserInput) -> Result<User> {
-        let pool = get_pool_from_context(ctx).await?;
+        let conn = get_conn_from_context(ctx).await?;
 
-        let amount_users = UserRepository::find_users_amount(&pool.conn).await?;
+        let amount_users = UserRepository::find_users_amount(conn).await?;
 
         match amount_users {
             0 => {}
@@ -46,14 +48,14 @@ impl UserMutation {
             role: UserRole::Admin,
         };
 
-        let user = UserRepository::create(&pool.conn, input).await?;
+        let user = UserRepository::create(conn, input).await?;
 
         Ok(user.into())
     }
 
     #[graphql(guard = "RoleGuard::new(Resource::User, Action::Write)")]
     pub async fn new_user(&self, ctx: &Context<'_>, input: UserInput) -> Result<User> {
-        let pool = get_pool_from_context(ctx).await?;
+        let conn = get_conn_from_context(ctx).await?;
 
         let input = UserRepositoryInput {
             email: input.email,
@@ -62,20 +64,20 @@ impl UserMutation {
             role: UserRole::Editor,
         };
 
-        let user = UserRepository::create(&pool.conn, input).await?;
+        let user = UserRepository::create(conn, input).await?;
 
         Ok(user.into())
     }
 
     pub async fn change_role(&self, ctx: &Context<'_>, input: ChangeRoleInput) -> Result<User> {
-        let pool = get_pool_from_context(ctx).await?;
+        let conn = get_conn_from_context(ctx).await?;
 
         let input = ChangeRoleRepositoryInput {
             role: input.role.into(),
             uuid: Uuid::from_str(&input.uuid)?,
         };
 
-        let user = UserRepository::change_role(&pool.conn, input).await?;
+        let user = UserRepository::change_role(conn, input).await?;
 
         Ok(user.into())
     }

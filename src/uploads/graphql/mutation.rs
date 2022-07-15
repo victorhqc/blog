@@ -1,6 +1,6 @@
 use crate::{
     authorization::graphql::{Action, Resource, RoleGuard},
-    graphql::context::{get_aws_from_context, get_pool_from_context, get_token_from_context},
+    graphql::context::{get_aws_from_context, get_conn_from_context, get_token_from_context},
     uploads::{
         aws::{remove_from_s3, upload_to_s3},
         graphql::FileUpload,
@@ -23,7 +23,7 @@ impl UploadMutation {
         let token = get_token_from_context(ctx)
             .await?
             .context(MissingTokenSnafu)?;
-        let pool = get_pool_from_context(ctx).await?;
+        let conn = get_conn_from_context(ctx).await?;
 
         let upload = file.value(ctx)?;
 
@@ -43,7 +43,7 @@ impl UploadMutation {
             content_type: upload.content_type.try_into()?,
         };
 
-        let upload = UploadsRepository::create(&pool.conn, input).await?;
+        let upload = UploadsRepository::create(conn, input).await?;
 
         Ok(upload.into())
     }
@@ -51,15 +51,15 @@ impl UploadMutation {
     #[graphql(guard = "RoleGuard::new(Resource::File, Action::Write)")]
     async fn remove_file(&self, ctx: &Context<'_>, uuid: String) -> Result<ID> {
         let aws = get_aws_from_context(ctx).await?;
-        let pool = get_pool_from_context(ctx).await?;
+        let conn = get_conn_from_context(ctx).await?;
 
         let uuid = Uuid::from_str(&uuid)?;
-        let file = UploadsRepository::find_by_id(&pool.conn, uuid)
+        let file = UploadsRepository::find_by_id(conn, uuid)
             .await?
             .context(MissingFileSnafu { uuid })?;
 
         remove_from_s3(aws, &file.s3_key).await?;
-        UploadsRepository::remove(&pool.conn, file).await?;
+        UploadsRepository::remove(conn, file).await?;
 
         Ok(uuid.into())
     }

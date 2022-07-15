@@ -1,9 +1,13 @@
-use crate::authorization::graphql::{Action, Resource, RoleGuard};
-use crate::graphql::context::get_pool_from_context;
-use crate::user::repository::UserRepository;
+use crate::{
+    authorization::graphql::{Action, Resource, RoleGuard},
+    graphql::context::get_conn_from_context,
+    user::repository::UserRepository,
+};
 use async_graphql::*;
-use entity::enums::Role as UserRole;
-use entity::users;
+use entity::{
+    enums::Role as UserRole,
+    users::{self},
+};
 use sea_orm::entity::prelude::Uuid;
 use std::{convert::From, str::FromStr};
 
@@ -23,10 +27,10 @@ pub struct UserQuery;
 impl UserQuery {
     #[graphql(guard = "RoleGuard::new(Resource::User, Action::Read)")]
     pub async fn user(&self, ctx: &Context<'_>, uuid: String) -> Result<Option<User>> {
-        let pool = get_pool_from_context(ctx).await?;
+        let conn = get_conn_from_context(ctx).await?;
 
         let uuid = Uuid::from_str(&uuid)?;
-        let user = UserRepository::find_by_id(&pool.conn, uuid).await?;
+        let user = UserRepository::find_by_id(conn, uuid).await?;
         let user = match user {
             Some(u) => u,
             None => return Ok(None),

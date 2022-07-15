@@ -1,6 +1,6 @@
 use super::Token as GraphqlToken;
 use crate::authorization::jwt::{sign_token, Token};
-use crate::graphql::context::get_pool_from_context;
+use crate::graphql::context::get_conn_from_context;
 use crate::user::UserRepository;
 use async_graphql::*;
 use rocket::serde::{Deserialize, Serialize};
@@ -18,10 +18,9 @@ pub struct AuthorizationMutation;
 #[Object]
 impl AuthorizationMutation {
     pub async fn login(&self, ctx: &Context<'_>, input: LoginInput) -> Result<GraphqlToken> {
-        let pool = get_pool_from_context(ctx).await.unwrap();
+        let conn = get_conn_from_context(ctx).await?;
 
-        let user =
-            UserRepository::find_by_credentials(&pool.conn, input.email, input.password).await?;
+        let user = UserRepository::find_by_credentials(conn, input.email, input.password).await?;
 
         let token = sign_token(user)?;
 

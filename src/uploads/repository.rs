@@ -18,7 +18,7 @@ pub struct UploadsRepository;
 
 impl UploadsRepository {
     pub async fn create(
-        db: &DatabaseConnection,
+        conn: &DatabaseConnection,
         input: UploadsRepositoryInput,
     ) -> Result<uploads::Model> {
         let photo = uploads::ActiveModel {
@@ -30,27 +30,34 @@ impl UploadsRepository {
         };
 
         let res = Upload::insert(photo)
-            .exec(db)
+            .exec(conn)
             .await
             .context(QueryFailedSnafu)?;
 
         let last_insert_id = Uuid::from_bytes(get_uuid_bytes(&res.last_insert_id));
-        UploadsRepository::find_by_id(db, last_insert_id)
+        UploadsRepository::find_by_id(conn, last_insert_id)
             .await?
             .context(PhotoNotFoundSnafu { id: last_insert_id })
     }
 
-    pub async fn remove(db: &DatabaseConnection, upload: uploads::Model) -> Result<()> {
-        upload.delete(db).await.context(QueryFailedSnafu)?;
+    pub async fn remove(conn: &DatabaseConnection, upload: uploads::Model) -> Result<()> {
+        upload.delete(conn).await.context(QueryFailedSnafu)?;
 
         Ok(())
     }
 
-    pub async fn find_by_id(db: &DatabaseConnection, uuid: Uuid) -> Result<Option<uploads::Model>> {
+    pub async fn find_by_id(
+        conn: &DatabaseConnection,
+        uuid: Uuid,
+    ) -> Result<Option<uploads::Model>> {
         Upload::find_by_id(uuid.as_bytes().to_vec())
-            .one(db)
+            .one(conn)
             .await
             .context(QueryFailedSnafu)
+    }
+
+    pub async fn find_all(conn: &DatabaseConnection) -> Result<Vec<uploads::Model>> {
+        Upload::find().all(conn).await.context(QueryFailedSnafu)
     }
 }
 

@@ -1,32 +1,40 @@
-use async_graphql::{SimpleObject, ID};
-use chrono::{DateTime, Utc};
-use entity::uploads;
-use std::convert::From;
+use super::FileUpload;
+use crate::{
+    authorization::graphql::{Action, Resource, RoleGuard},
+    graphql::context::get_conn_from_context,
+    uploads::UploadsRepository,
+};
+use async_graphql::{Context, Object, Result};
+use std::str::FromStr;
 use uuid::Uuid;
 
-#[derive(SimpleObject, Clone)]
-pub struct FileUpload {
-    pub uuid: ID,
-    pub filename: String,
-    pub content_type: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    // #[graphql(skip)]
-    // created_by: String,
-}
+#[derive(Default)]
+pub struct UploadQuery;
 
-impl From<uploads::Model> for FileUpload {
-    fn from(file_upload: uploads::Model) -> Self {
-        let uuid = Uuid::from_bytes(file_upload.uuid());
-        // let created_by = Uuid::from_bytes(file_upload.created_by());
+#[Object]
+impl UploadQuery {
+    #[graphql(guard = "RoleGuard::new(Resource::File, Action::Read)")]
+    pub async fn file(&self, ctx: &Context<'_>, uuid: String) -> Result<Option<FileUpload>> {
+        let conn = get_conn_from_context(ctx).await?;
+        let uuid = Uuid::from_str(&uuid)?;
 
-        FileUpload {
-            uuid: uuid.into(),
-            filename: file_upload.filename,
-            content_type: file_upload.content_type,
-            created_at: file_upload.created_at,
-            updated_at: file_upload.updated_at,
-            // created_by: created_by.to_string(),
+        let file = UploadsRepository::find_by_id(conn, uuid).await?;
+
+        match file {
+            Some(f) => Ok(Some(f.into())),
+            None => Ok(None),
         }
+    }
+
+    pub async fn all_files(&self, ctx: &Context<'_>) -> Result<Vec<FileUpload>> {
+        let conn = get_conn_from_context(ctx).await?;
+
+        let files = UploadsRepository::find_all(conn)
+            .await?
+            .into_iter()
+            .map(|f| f.into())
+            .collect();
+
+        Ok(files)
     }
 }

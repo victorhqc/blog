@@ -5,6 +5,7 @@ mod authorization;
 mod aws;
 mod db;
 mod graphql;
+mod posts;
 mod uploads;
 mod user;
 mod utils;

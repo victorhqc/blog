@@ -29,32 +29,32 @@ pub struct ChangeRoleInput {
 pub struct UserRepository;
 
 impl UserRepository {
-    pub async fn find_by_id(db: &DatabaseConnection, id: Uuid) -> Result<Option<users::Model>> {
+    pub async fn find_by_id(conn: &DatabaseConnection, id: Uuid) -> Result<Option<users::Model>> {
         User::find_by_id(id.as_bytes().to_vec())
-            .one(db)
+            .one(conn)
             .await
             .context(QueryFailedSnafu)
     }
 
     pub async fn find_by_ids(
-        db: &DatabaseConnection,
+        conn: &DatabaseConnection,
         ids: &[UserUuid],
     ) -> Result<Vec<users::Model>> {
         let ids_vec: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
 
         User::find()
             .filter(users::Column::Uuid.is_in(ids_vec))
-            .all(db)
+            .all(conn)
             .await
             .context(QueryFailedSnafu)
     }
 
-    pub async fn find_users_amount(db: &DatabaseConnection) -> Result<usize> {
-        User::find().count(db).await.context(QueryFailedSnafu)
+    pub async fn find_users_amount(conn: &DatabaseConnection) -> Result<usize> {
+        User::find().count(conn).await.context(QueryFailedSnafu)
     }
 
     pub async fn create(
-        db: &DatabaseConnection,
+        conn: &DatabaseConnection,
         input: UserRepositoryInput,
     ) -> Result<users::Model> {
         if input.password != input.password_confirmation {
@@ -71,12 +71,12 @@ impl UserRepository {
         };
 
         let res = User::insert(user)
-            .exec(db)
+            .exec(conn)
             .await
             .context(QueryFailedSnafu)?;
 
         let last_id = Uuid::from_bytes(get_uuid_bytes(&res.last_insert_id));
-        let user = UserRepository::find_by_id(db, last_id).await?;
+        let user = UserRepository::find_by_id(conn, last_id).await?;
 
         match user {
             Some(u) => Ok(u),
@@ -85,13 +85,13 @@ impl UserRepository {
     }
 
     pub async fn find_by_credentials(
-        db: &DatabaseConnection,
+        conn: &DatabaseConnection,
         email: String,
         password: String,
     ) -> Result<users::Model> {
         let user = User::find()
             .filter(users::Column::Email.eq(email))
-            .one(db)
+            .one(conn)
             .await
             .context(QueryFailedSnafu)?;
 
@@ -110,10 +110,10 @@ impl UserRepository {
     }
 
     pub async fn change_role(
-        db: &DatabaseConnection,
+        conn: &DatabaseConnection,
         input: ChangeRoleInput,
     ) -> Result<users::Model> {
-        let user = UserRepository::find_by_id(db, input.uuid)
+        let user = UserRepository::find_by_id(conn, input.uuid)
             .await?
             .context(MissingUserSnafu)?;
 
@@ -121,7 +121,7 @@ impl UserRepository {
         user.role = Set(input.role.to_string());
         user.updated_at = Set(get_now());
 
-        let user: users::Model = user.update(db).await.context(QueryFailedSnafu)?;
+        let user: users::Model = user.update(conn).await.context(QueryFailedSnafu)?;
 
         Ok(user)
     }

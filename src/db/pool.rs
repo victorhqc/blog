@@ -5,7 +5,7 @@ use rocket::figment::{
 };
 use sea_orm::ConnectOptions;
 use sea_orm_rocket::{Config, Database};
-use std::time::Duration;
+use std::{env, fs, str, time::Duration};
 
 #[derive(Database, Debug)]
 #[database("blog_api")]
@@ -55,9 +55,16 @@ pub fn get_figment_before_build() -> Figment {
     let default_config = rocket::Config::default();
     let workers: usize = default_config.workers;
 
+    let rocket_bytes = include_bytes!("../../Rocket.toml");
+    let rocket_str = str::from_utf8(rocket_bytes).expect("Failed to load Rocket.toml");
+
+    let mut tmp_dir = env::temp_dir();
+    tmp_dir.push("Rocket_blog.toml");
+    fs::write(&tmp_dir, rocket_str).expect("Failed to write tmp Rocket file");
+
     Figment::from(default_config)
         .merge(Serialized::defaults(rocket::Config::default()))
-        .merge(Toml::file("Rocket.toml").nested())
+        .merge(Toml::file(&tmp_dir).nested())
         .focus("databases.blog_api")
         .merge(Serialized::default("max_connections", workers * 4))
         .merge(Serialized::default("connect_timeout", 5))

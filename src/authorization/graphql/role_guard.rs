@@ -12,7 +12,7 @@ use strum_macros::Display;
 
 #[derive(Eq, PartialEq, Display)]
 pub enum Resource {
-    // Post,
+    Post,
     // Tag,
     User,
     File,

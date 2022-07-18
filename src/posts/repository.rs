@@ -48,6 +48,10 @@ impl PostsRepository {
             .await
             .context(QueryFailedSnafu)
     }
+
+    pub async fn find_all(conn: &DatabaseConnection) -> Result<Vec<posts::Model>> {
+        Post::find().all(conn).await.context(QueryFailedSnafu)
+    }
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

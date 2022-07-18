@@ -13,7 +13,11 @@ use strum::ParseError;
 use strum_macros::{Display, EnumString};
 use uuid::Uuid;
 
-#[derive(SimpleObject, Clone)]
+mod query;
+
+pub use query::*;
+
+#[derive(SimpleObject, Clone, Debug)]
 #[graphql(complex)]
 pub struct Post {
     pub uuid: ID,
@@ -38,13 +42,19 @@ impl Post {
     }
 }
 
+#[derive(Debug, Snafu)]
+pub enum GraphqlError {
+    #[snafu(display("Post has Invalid author"))]
+    InvalidAuthor,
+}
+
 impl TryFrom<posts::Model> for Post {
     type Error = Error;
 
     fn try_from(post: posts::Model) -> Result<Self, Self::Error> {
         let uuid = Uuid::from_bytes(post.uuid());
         let created_by = Uuid::from_bytes(post.uuid());
-        let status = Status::from_str(&post.status).context(InvalidStatusSnafu)?;
+        let status = Status::from_str(&post.status).context(InvalidStatusSnafu { uuid })?;
 
         Ok(Post {
             uuid: uuid.into(),
@@ -87,9 +97,6 @@ impl From<DBStatus> for Status {
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Given String is not a valid status: {}", source))]
-    InvalidStatus { source: ParseError },
-
-    #[snafu(display("Post has Invalid author"))]
-    InvalidAuthor,
+    #[snafu(display("Status: {} is not valid for Post: {}", source, uuid))]
+    InvalidStatus { source: ParseError, uuid: Uuid },
 }

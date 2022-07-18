@@ -39,3 +39,7 @@ uuid = { version = "0.8", features = ["serde"] }
 
 entity = { path = "entity" }
 migration = { path = "migration" }
+
+[profile.release]
+codegen-units = 1
+lto = "fat"

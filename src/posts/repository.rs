@@ -1,14 +1,10 @@
 use crate::utils::uuid::get_uuid_bytes;
-use entity::{
-    enums::Status,
-    posts::{self, Entity as Post},
-};
+use entity::posts::{self, Entity as Post};
 use sea_orm::{DatabaseConnection, DbErr, EntityTrait, Set};
 use snafu::prelude::*;
 use uuid::Uuid;
 
 pub struct NewPostInput {
-    pub status: Status,
     pub title: String,
     pub raw: String,
     pub html: String,
@@ -20,7 +16,6 @@ pub struct PostsRepository;
 impl PostsRepository {
     pub async fn create(conn: &DatabaseConnection, input: NewPostInput) -> Result<posts::Model> {
         let post = posts::ActiveModel {
-            status: Set(input.status.to_string()),
             title: Set(input.title),
             raw: Set(input.raw),
             html: Set(input.html),

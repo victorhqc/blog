@@ -28,7 +28,6 @@ type MutationRoot {
 }
 
 input NewPostInput {
-	status: Status!
 	title: String!
 	raw: String!
 	html: String!

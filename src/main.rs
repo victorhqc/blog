@@ -21,6 +21,7 @@ use crate::{
         routes::{graphql_playground, graphql_query, graphql_request, graphql_request_multipart},
         ApiSchema, MutationRoot, QueryRoot,
     },
+    uploads::handlers::get_file,
     utils::cors::init_cors,
 };
 use async_graphql::{dataloader::DataLoader, EmptySubscription, Schema};
@@ -86,6 +87,7 @@ async fn main() -> Result<(), rocket::Error> {
                 graphql_playground,
             ],
         )
+        .mount("/v1/", routes![get_file])
         .launch()
         .await?;
 

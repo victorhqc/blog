@@ -37,7 +37,7 @@ impl UploadsRepository {
         let last_insert_id = Uuid::from_bytes(get_uuid_bytes(&res.last_insert_id));
         UploadsRepository::find_by_id(conn, last_insert_id)
             .await?
-            .context(PhotoNotFoundSnafu { id: last_insert_id })
+            .context(FileNotFoundSnafu { id: last_insert_id })
     }
 
     pub async fn remove(conn: &DatabaseConnection, upload: uploads::Model) -> Result<()> {
@@ -68,6 +68,6 @@ pub enum Error {
     #[snafu(display("Photo Query failed: {}", source))]
     QueryFailed { source: DbErr },
 
-    #[snafu(display("Photo not found with {id}"))]
-    PhotoNotFound { id: Uuid },
+    #[snafu(display("File not found with {id}"))]
+    FileNotFound { id: Uuid },
 }

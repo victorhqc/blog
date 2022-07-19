@@ -1,0 +1,6 @@
+p, writer, post, write
+p, writer, post, read
+p, writer, tag, write
+p, writer, tag, read
+p, editor, post, read
+p, editor, tag, read

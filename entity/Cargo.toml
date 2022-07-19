@@ -1,0 +1,20 @@
+[package]
+name = "entity"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "entity"
+path = "src/lib.rs"
+
+[dependencies]
+rocket = { version = "0.5.0-rc.1", features = ["json", "uuid"] }
+uuid = { version = "0.8", features = ["serde"] }
+chrono = "0.4.19"
+strum = "0.24.0"
+strum_macros = "0.24"
+
+[dependencies.sea-orm]
+version = "^0.8.0"
+features = ["runtime-tokio-native-tls", "sqlx-sqlite", "with-chrono"]

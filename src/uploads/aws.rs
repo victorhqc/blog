@@ -20,8 +20,7 @@ pub async fn upload_to_s3(
 ) -> Result<String> {
     let key = Uuid::new_v4();
     let mut file_data = Vec::new();
-    file.read_to_end(&mut file_data)
-        .context(FailedToReadSnafu)?;
+    file.read_to_end(&mut file_data).context(ReadSnafu)?;
 
     let s3_key = format!("{}/{}", id, key).to_string();
 
@@ -34,7 +33,7 @@ pub async fn upload_to_s3(
         content_type,
     )
     .await
-    .context(FailedToUploadSnafu)?;
+    .context(UploadSnafu)?;
 
     debug!("File uploaded to S3");
 
@@ -44,7 +43,7 @@ pub async fn upload_to_s3(
 pub async fn remove_from_s3(aws: &AWSContext, s3_key: &str) -> Result<()> {
     remove_object(&aws.client, &aws.bucket_name, s3_key)
         .await
-        .context(FailedToRemoveSnafu)?;
+        .context(RemoveSnafu)?;
 
     debug!("File removed from S3");
 
@@ -56,11 +55,11 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[derive(Debug, Snafu)]
 pub enum Error {
     #[snafu(display("Failed to read file: {}", source))]
-    FailedToRead { source: IOError },
+    Read { source: IOError },
 
     #[snafu(display("Failed to upload file to S3: {}", source))]
-    FailedToUpload { source: S3Error },
+    Upload { source: S3Error },
 
     #[snafu(display("Failed to remove file from S3: {}", source))]
-    FailedToRemove { source: S3Error },
+    Remove { source: S3Error },
 }

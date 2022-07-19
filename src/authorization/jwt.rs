@@ -31,7 +31,7 @@ pub fn sign_token(user: User) -> Result<Token> {
     let mut claims = BTreeMap::<String, String>::new();
     let uuid = Uuid::from_bytes(user.uuid());
     claims.insert("uuid".to_string(), uuid.to_string());
-    claims.insert("role".to_string(), user.role.to_string());
+    claims.insert("role".to_string(), user.role);
     claims.insert("created_at".to_string(), now.to_string());
 
     let token = claims.sign_with_key(&key).context(SignatureFailedSnafu)?;

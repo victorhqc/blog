@@ -40,7 +40,7 @@ impl Post {
         let uuid = UserUuid::new(uuid);
         let author = loader.load_one(uuid).await?.context(InvalidAuthorSnafu)?;
 
-        Ok(author.into())
+        Ok(author)
     }
 }
 

@@ -4,6 +4,13 @@ input ChangeRoleInput {
 	role: Role!
 }
 
+"""
+Implement the DateTime<Utc> scalar
+
+The input/output is a string in RFC3339 format.
+"""
+scalar DateTime
+
 
 
 
@@ -17,16 +24,42 @@ type MutationRoot {
 	newUser(input: UserInput!): User!
 	changeRole(input: ChangeRoleInput!): User!
 	login(input: LoginInput!): Token!
+	newPost(input: NewPostInput!): Post!
+}
+
+input NewPostInput {
+	status: Status!
+	title: String!
+	raw: String!
+	html: String!
+}
+
+type Post {
+	uuid: ID!
+	status: Status!
+	raw: String!
+	html: String!
+	createdAt: DateTime!
+	updatedAt: DateTime!
+	author: User!
 }
 
 type QueryRoot {
 	user(uuid: String!): User
+	post(uuid: String!): Post
+	allPosts: [Post!]!
 }
 
 enum Role {
 	ADMIN
 	WRITER
 	EDITOR
+}
+
+enum Status {
+	PUBLISHED
+	DISABLED
+	DRAFT
 }
 
 

@@ -1,4 +1,9 @@
 
+input ChangePostStatusInput {
+	uuid: ID!
+	status: Status!
+}
+
 input ChangeRoleInput {
 	uuid: String!
 	role: Role!
@@ -25,6 +30,8 @@ type MutationRoot {
 	changeRole(input: ChangeRoleInput!): User!
 	login(input: LoginInput!): Token!
 	newPost(input: NewPostInput!): Post!
+	updatePost(input: UpdatePostInput!): Post!
+	changePostStatus(input: ChangePostStatusInput!): Post!
 }
 
 input NewPostInput {
@@ -64,6 +71,13 @@ enum Status {
 
 type Token {
 	token: String!
+}
+
+input UpdatePostInput {
+	uuid: ID!
+	title: String!
+	raw: String!
+	html: String!
 }
 
 type User {

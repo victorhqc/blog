@@ -1,6 +1,9 @@
 use crate::utils::uuid::get_uuid_bytes;
-use entity::posts::{self, Entity as Post};
-use sea_orm::{DatabaseConnection, DbErr, EntityTrait, Set};
+use entity::{
+    enums::Status,
+    posts::{self, Entity as Post},
+};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, Set};
 use snafu::prelude::*;
 use uuid::Uuid;
 
@@ -9,6 +12,18 @@ pub struct NewPostInput {
     pub raw: String,
     pub html: String,
     pub created_by: Uuid,
+}
+
+pub struct UpdatePostInput {
+    pub uuid: Uuid,
+    pub title: String,
+    pub raw: String,
+    pub html: String,
+}
+
+pub struct ChangePostStatusInput {
+    pub uuid: Uuid,
+    pub status: Status,
 }
 
 pub struct PostsRepository;
@@ -35,6 +50,40 @@ impl PostsRepository {
             .context(PostNotFoundSnafu {
                 uuid: last_insert_id,
             })
+    }
+
+    pub async fn update_post(
+        conn: &DatabaseConnection,
+        input: UpdatePostInput,
+    ) -> Result<posts::Model> {
+        let post = PostsRepository::find_by_id(conn, input.uuid)
+            .await?
+            .context(PostNotFoundSnafu { uuid: input.uuid })?;
+
+        let mut post: posts::ActiveModel = post.into();
+        post.title = Set(input.title);
+        post.raw = Set(input.raw);
+        post.html = Set(input.html);
+
+        let post: posts::Model = post.update(conn).await.context(QueryFailedSnafu)?;
+
+        Ok(post)
+    }
+
+    pub async fn change_post_status(
+        conn: &DatabaseConnection,
+        input: ChangePostStatusInput,
+    ) -> Result<posts::Model> {
+        let post = PostsRepository::find_by_id(conn, input.uuid)
+            .await?
+            .context(PostNotFoundSnafu { uuid: input.uuid })?;
+
+        let mut post: posts::ActiveModel = post.into();
+        post.status = Set(input.status.to_string());
+
+        let post: posts::Model = post.update(conn).await.context(QueryFailedSnafu)?;
+
+        Ok(post)
     }
 
     pub async fn find_by_id(conn: &DatabaseConnection, uuid: Uuid) -> Result<Option<posts::Model>> {

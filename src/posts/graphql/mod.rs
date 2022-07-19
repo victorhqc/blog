@@ -13,8 +13,10 @@ use strum::ParseError;
 use strum_macros::{Display, EnumString};
 use uuid::Uuid;
 
+mod mutation;
 mod query;
 
+pub use mutation::*;
 pub use query::*;
 
 #[derive(SimpleObject, Clone, Debug)]

@@ -1,6 +1,6 @@
 use crate::{
     authorization::graphql::AuthorizationMutation,
-    posts::graphql::PostsQuery,
+    posts::graphql::{PostsMutation, PostsQuery},
     user::graphql::{UserMutation, UserQuery},
 };
 use async_graphql::*;
@@ -16,6 +16,6 @@ pub use export_sdl::*;
 pub struct QueryRoot(UserQuery, PostsQuery);
 
 #[derive(MergedObject, Default)]
-pub struct MutationRoot(UserMutation, AuthorizationMutation);
+pub struct MutationRoot(UserMutation, AuthorizationMutation, PostsMutation);
 
 pub type ApiSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;

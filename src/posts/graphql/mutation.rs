@@ -8,6 +8,7 @@ use crate::{
     },
 };
 use async_graphql::{Context, InputObject, Object, Result as GraphqlResult, ID};
+use markdown_to_html::markdown;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -15,7 +16,6 @@ use uuid::Uuid;
 pub struct NewPostInput {
     pub title: String,
     pub raw: String,
-    pub html: String,
 }
 
 #[derive(InputObject)]
@@ -45,7 +45,7 @@ impl PostsMutation {
 
         let input = NewPostRepoInput {
             created_by: uuid,
-            html: input.html,
+            html: markdown(&input.raw),
             raw: input.raw,
             title: input.title,
         };

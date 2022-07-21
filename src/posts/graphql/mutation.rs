@@ -23,7 +23,6 @@ pub struct UpdatePostInput {
     pub uuid: ID,
     pub title: String,
     pub raw: String,
-    pub html: String,
 }
 
 #[derive(InputObject)]
@@ -67,7 +66,7 @@ impl PostsMutation {
 
         let input = UpdatePostRepoInput {
             uuid,
-            html: input.html,
+            html: markdown(&input.raw),
             raw: input.raw,
             title: input.title,
         };

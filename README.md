@@ -57,7 +57,7 @@ from the DB.
 
 ### Requirements
 
-- Rust >= 1.61.1
+- Rust >= 1.62.1
 
 ### How to Run
 

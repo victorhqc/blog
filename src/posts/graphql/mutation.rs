@@ -100,4 +100,14 @@ impl PostsMutation {
 
         Ok(post)
     }
+
+    #[graphql(guard = "RoleGuard::new(Resource::Post, Action::Write)")]
+    pub async fn delete_post(&self, ctx: &Context<'_>, uuid: String) -> GraphqlResult<ID> {
+        let conn = get_conn_from_context(ctx).await?;
+        let uuid = Uuid::from_str(&uuid)?;
+
+        PostsRepository::delete(conn, uuid).await?;
+
+        Ok(uuid.into())
+    }
 }

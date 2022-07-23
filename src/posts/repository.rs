@@ -102,6 +102,15 @@ impl PostsRepository {
         Ok(post)
     }
 
+    pub async fn delete(conn: &DatabaseConnection, uuid: Uuid) -> Result<()> {
+        Post::delete_by_id(uuid.as_bytes().to_vec())
+            .exec(conn)
+            .await
+            .context(QueryFailedSnafu)?;
+
+        Ok(())
+    }
+
     pub async fn find_by_id(conn: &DatabaseConnection, uuid: Uuid) -> Result<Option<posts::Model>> {
         Post::find_by_id(uuid.as_bytes().to_vec())
             .one(conn)

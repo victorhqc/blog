@@ -32,6 +32,7 @@ type MutationRoot {
 	newPost(input: NewPostInput!): Post!
 	updatePost(input: UpdatePostInput!): Post!
 	changePostStatus(input: ChangePostStatusInput!): Post!
+	deletePost(uuid: String!): ID!
 }
 
 input NewPostInput {

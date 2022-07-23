@@ -1,11 +1,61 @@
-use crate::utils::vec::vec_diff;
-use entity::tags::{self, Entity as Tag};
-use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set};
+use crate::{tags::graphql::PostTagUuid, utils::vec::vec_diff};
+use entity::{
+    post_tags::Relation as PostTagsRelation,
+    posts::{Column as PostColumn, Entity as PostEntity, Model as Post},
+    tags::{self, Entity as Tag},
+};
+use sea_orm::{
+    ColumnTrait, DatabaseConnection, DbErr, EntityTrait, JoinType, QueryFilter, QuerySelect,
+    RelationTrait, Set,
+};
 use snafu::prelude::*;
+use uuid::Uuid;
 
 pub struct TagsRepository;
 
 impl TagsRepository {
+    /// Used for the tags dataloader. It returns all the tags grouped by post.
+    pub async fn find_by_post_ids(
+        conn: &DatabaseConnection,
+        ids: &[PostTagUuid],
+    ) -> Result<Vec<(Uuid, Vec<tags::Model>)>> {
+        let ids_vec: Vec<Uuid> = ids.iter().map(|id| id.0).collect();
+
+        let post_tags: Vec<(tags::Model, Option<Post>)> = tags::Entity::find()
+            .select_also(PostEntity)
+            .join(JoinType::InnerJoin, PostTagsRelation::Tags.def().rev())
+            .join(JoinType::InnerJoin, PostTagsRelation::Posts.def())
+            .filter(PostColumn::Uuid.is_in(ids_vec))
+            .all(conn)
+            .await
+            .context(QueryFailedSnafu)?;
+
+        let folded: Vec<(Uuid, Vec<tags::Model>)> = vec![];
+
+        let post_tags = post_tags
+            .into_iter()
+            .filter_map(|(tag, post)| match post {
+                Some(p) => Some((Uuid::from_bytes(p.uuid()), tag)),
+                None => None,
+            })
+            .fold(folded, |mut acc, (post_uuid, tag)| {
+                let index = acc.iter().position(|(uuid, _)| uuid == &post_uuid);
+
+                match index {
+                    Some(i) => {
+                        acc[i].1.push(tag);
+                    }
+                    None => {
+                        acc.push((post_uuid, vec![tag]));
+                    }
+                };
+
+                acc
+            });
+
+        Ok(post_tags)
+    }
+
     pub async fn find_or_create_tags(
         conn: &DatabaseConnection,
         tags: Vec<String>,

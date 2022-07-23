@@ -1,5 +1,6 @@
 use crate::{
     graphql::loader::DataLoader as AppLoader,
+    tags::graphql::{PostTagUuid, Tag},
     user::graphql::{User, UserUuid},
 };
 use async_graphql::{
@@ -42,12 +43,27 @@ impl Post {
 
         Ok(author)
     }
+
+    async fn tags(&self, ctx: &Context<'_>) -> Result<Vec<Tag>> {
+        let loader = ctx.data_unchecked::<DataLoader<AppLoader>>();
+        let uuid = Uuid::from_str(&self.uuid)?;
+        let uuid = PostTagUuid::new(uuid);
+        let tags = loader
+            .load_one(uuid)
+            .await?
+            .context(FailedToLoadTagsSnafu)?;
+
+        Ok(tags)
+    }
 }
 
 #[derive(Debug, Snafu)]
 pub enum GraphqlError {
     #[snafu(display("Post has Invalid author"))]
     InvalidAuthor,
+
+    #[snafu(display("Failed to load tags"))]
+    FailedToLoadTags,
 }
 
 impl TryFrom<posts::Model> for Post {

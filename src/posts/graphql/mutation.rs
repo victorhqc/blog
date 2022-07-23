@@ -8,6 +8,7 @@ use crate::{
     },
 };
 use async_graphql::{Context, InputObject, Object, Result as GraphqlResult, ID};
+use markdown_to_html::markdown;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -15,7 +16,7 @@ use uuid::Uuid;
 pub struct NewPostInput {
     pub title: String,
     pub raw: String,
-    pub html: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(InputObject)]
@@ -23,7 +24,7 @@ pub struct UpdatePostInput {
     pub uuid: ID,
     pub title: String,
     pub raw: String,
-    pub html: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(InputObject)]
@@ -45,9 +46,10 @@ impl PostsMutation {
 
         let input = NewPostRepoInput {
             created_by: uuid,
-            html: input.html,
+            html: markdown(&input.raw),
             raw: input.raw,
             title: input.title,
+            tags: input.tags,
         };
 
         let post = PostsRepository::create(conn, input).await?;
@@ -67,9 +69,10 @@ impl PostsMutation {
 
         let input = UpdatePostRepoInput {
             uuid,
-            html: input.html,
+            html: markdown(&input.raw),
             raw: input.raw,
             title: input.title,
+            tags: input.tags,
         };
 
         let post = PostsRepository::update_post(conn, input).await?;
@@ -96,5 +99,15 @@ impl PostsMutation {
         let post: Post = post.try_into()?;
 
         Ok(post)
+    }
+
+    #[graphql(guard = "RoleGuard::new(Resource::Post, Action::Write)")]
+    pub async fn delete_post(&self, ctx: &Context<'_>, uuid: String) -> GraphqlResult<ID> {
+        let conn = get_conn_from_context(ctx).await?;
+        let uuid = Uuid::from_str(&uuid)?;
+
+        PostsRepository::delete(conn, uuid).await?;
+
+        Ok(uuid.into())
     }
 }

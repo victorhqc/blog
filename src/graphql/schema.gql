@@ -16,6 +16,15 @@ The input/output is a string in RFC3339 format.
 """
 scalar DateTime
 
+type FileUpload {
+	uuid: ID!
+	filename: String!
+	contentType: String!
+	createdAt: DateTime!
+	updatedAt: DateTime!
+	urls: Urls!
+}
+
 
 
 
@@ -32,12 +41,15 @@ type MutationRoot {
 	newPost(input: NewPostInput!): Post!
 	updatePost(input: UpdatePostInput!): Post!
 	changePostStatus(input: ChangePostStatusInput!): Post!
+	deletePost(uuid: String!): ID!
+	uploadFile(file: Upload!): FileUpload!
+	removeFile(uuid: String!): ID!
 }
 
 input NewPostInput {
 	title: String!
 	raw: String!
-	html: String!
+	tags: [String!]!
 }
 
 type Post {
@@ -48,12 +60,15 @@ type Post {
 	createdAt: DateTime!
 	updatedAt: DateTime!
 	author: User!
+	tags: [Tag!]!
 }
 
 type QueryRoot {
 	user(uuid: String!): User
 	post(uuid: String!): Post
 	allPosts: [Post!]!
+	file(uuid: String!): FileUpload
+	allFiles: [FileUpload!]!
 }
 
 enum Role {
@@ -69,6 +84,11 @@ enum Status {
 }
 
 
+type Tag {
+	uuid: ID!
+	name: String!
+}
+
 type Token {
 	token: String!
 }
@@ -77,7 +97,13 @@ input UpdatePostInput {
 	uuid: ID!
 	title: String!
 	raw: String!
-	html: String!
+	tags: [String!]!
+}
+
+scalar Upload
+
+type Urls {
+	url: String!
 }
 
 type User {

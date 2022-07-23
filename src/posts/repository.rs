@@ -1,9 +1,17 @@
-use crate::utils::uuid::get_uuid_bytes;
+use crate::{
+    tags::{Error as TagsError, TagsRepository},
+    utils::uuid::get_uuid_bytes,
+};
 use entity::{
     enums::Status,
+    post_tags::{
+        ActiveModel as PostTagsActiveModel, Column as PostTagsColumn, Entity as PostTagsEntity,
+    },
     posts::{self, Entity as Post},
 };
-use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
+};
 use snafu::prelude::*;
 use uuid::Uuid;
 
@@ -11,6 +19,7 @@ pub struct NewPostInput {
     pub title: String,
     pub raw: String,
     pub html: String,
+    pub tags: Vec<String>,
     pub created_by: Uuid,
 }
 
@@ -19,6 +28,7 @@ pub struct UpdatePostInput {
     pub title: String,
     pub raw: String,
     pub html: String,
+    pub tags: Vec<String>,
 }
 
 pub struct ChangePostStatusInput {
@@ -45,11 +55,15 @@ impl PostsRepository {
 
         let last_insert_id = Uuid::from_bytes(get_uuid_bytes(&result.last_insert_id));
 
-        PostsRepository::find_by_id(conn, last_insert_id)
+        let post = PostsRepository::find_by_id(conn, last_insert_id)
             .await?
             .context(PostNotFoundSnafu {
                 uuid: last_insert_id,
-            })
+            })?;
+
+        PostsRepository::register_tags(conn, &post, input.tags).await?;
+
+        Ok(post)
     }
 
     pub async fn update_post(
@@ -66,6 +80,8 @@ impl PostsRepository {
         post.html = Set(input.html);
 
         let post: posts::Model = post.update(conn).await.context(QueryFailedSnafu)?;
+
+        PostsRepository::register_tags(conn, &post, input.tags).await?;
 
         Ok(post)
     }
@@ -86,6 +102,15 @@ impl PostsRepository {
         Ok(post)
     }
 
+    pub async fn delete(conn: &DatabaseConnection, uuid: Uuid) -> Result<()> {
+        Post::delete_by_id(uuid.as_bytes().to_vec())
+            .exec(conn)
+            .await
+            .context(QueryFailedSnafu)?;
+
+        Ok(())
+    }
+
     pub async fn find_by_id(conn: &DatabaseConnection, uuid: Uuid) -> Result<Option<posts::Model>> {
         Post::find_by_id(uuid.as_bytes().to_vec())
             .one(conn)
@@ -96,6 +121,41 @@ impl PostsRepository {
     pub async fn find_all(conn: &DatabaseConnection) -> Result<Vec<posts::Model>> {
         Post::find().all(conn).await.context(QueryFailedSnafu)
     }
+
+    async fn register_tags(
+        conn: &DatabaseConnection,
+        post: &posts::Model,
+        tags: Vec<String>,
+    ) -> Result<()> {
+        // 1. Unattach the tags that are linked to the post.
+        PostTagsEntity::delete_many()
+            .filter(PostTagsColumn::PostUuid.eq(post.uuid.clone()))
+            .exec(conn)
+            .await
+            .context(TagsQueryFailedSnafu)?;
+
+        // 2. Find or create the given tags.
+        let tags_to_attach = TagsRepository::find_or_create_tags(conn, tags)
+            .await
+            .context(TagsRepoFailedSnafu)?;
+
+        // 3. Attach the tags to the Post
+        let tags_to_attach: Vec<PostTagsActiveModel> = tags_to_attach
+            .into_iter()
+            .map(|tag| PostTagsActiveModel {
+                post_uuid: Set(post.uuid.clone()),
+                tag_uuid: Set(tag.uuid),
+                ..Default::default()
+            })
+            .collect();
+
+        PostTagsEntity::insert_many(tags_to_attach)
+            .exec(conn)
+            .await
+            .context(TagsQueryFailedSnafu)?;
+
+        Ok(())
+    }
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -105,6 +165,12 @@ pub enum Error {
     #[snafu(display("Posts Query failed: {}", source))]
     QueryFailed { source: DbErr },
 
+    #[snafu(display("Tags Query failed: {}", source))]
+    TagsQueryFailed { source: DbErr },
+
     #[snafu(display("Post with uuid {} not found", uuid))]
     PostNotFound { uuid: Uuid },
+
+    #[snafu(display("Failed in PostsRepository: {}", source))]
+    TagsRepoFailed { source: TagsError },
 }

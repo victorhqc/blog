@@ -120,6 +120,10 @@ mod posts {
         pub fn uuid(&self) -> [u8; 16] {
             super::get_uuid_bytes(&self.uuid)
         }
+
+        pub fn created_by(&self) -> [u8; 16] {
+            super::get_uuid_bytes(&self.created_by)
+        }
     }
 }
 

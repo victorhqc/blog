@@ -1,13 +1,13 @@
-use crate::utils::{uuid::get_uuid_bytes, vec::vec_diff};
+use crate::{
+    tags::{Error as TagsError, TagsRepository},
+    utils::uuid::get_uuid_bytes,
+};
 use entity::{
     enums::Status,
     post_tags::{
         ActiveModel as PostTagsActiveModel, Column as PostTagsColumn, Entity as PostTagsEntity,
     },
     posts::{self, Entity as Post},
-    tags::{
-        ActiveModel as TagsActiveModel, Column as TagColumn, Entity as TagEntity, Model as TagModel,
-    },
 };
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
@@ -126,7 +126,9 @@ impl PostsRepository {
             .context(TagsQueryFailedSnafu)?;
 
         // 2. Find or create the given tags.
-        let tags_to_attach = PostsRepository::find_or_create_tags(conn, tags).await?;
+        let tags_to_attach = TagsRepository::find_or_create_tags(conn, tags)
+            .await
+            .context(TagsRepoFailedSnafu)?;
 
         // 3. Attach the tags to the Post
         let tags_to_attach: Vec<PostTagsActiveModel> = tags_to_attach
@@ -145,51 +147,6 @@ impl PostsRepository {
 
         Ok(())
     }
-
-    async fn find_or_create_tags(
-        conn: &DatabaseConnection,
-        tags: Vec<String>,
-    ) -> Result<Vec<TagModel>> {
-        // 1. Check wether the given tags need to be created or not to the DB
-        let tags_ref: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
-        let existing_tags = TagEntity::find()
-            .filter(TagColumn::Name.is_in(tags_ref.clone()))
-            .all(conn)
-            .await
-            .context(TagsQueryFailedSnafu)?;
-
-        let existing_tag_names: Vec<String> =
-            existing_tags.iter().map(|tag| tag.name.clone()).collect();
-
-        // 2.The tags that do not exist yet will be created.
-        let tags_to_create = vec_diff(tags.clone(), existing_tag_names);
-
-        // If there are no tags to create, it means we can skip the create part.
-        if tags_to_create.len() == 0 {
-            return Ok(existing_tags);
-        }
-
-        // 3. Insert the missing tags to the DB
-        let new_tags: Vec<TagsActiveModel> = tags_to_create
-            .into_iter()
-            .map(|t| TagsActiveModel {
-                name: Set(t),
-                ..Default::default()
-            })
-            .collect();
-
-        TagEntity::insert_many(new_tags)
-            .exec(conn)
-            .await
-            .context(TagsQueryFailedSnafu)?;
-
-        // 4. Query for all the tags again, they now must exist in the DB
-        TagEntity::find()
-            .filter(TagColumn::Name.is_in(tags_ref))
-            .all(conn)
-            .await
-            .context(TagsQueryFailedSnafu)
-    }
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -204,4 +161,7 @@ pub enum Error {
 
     #[snafu(display("Post with uuid {} not found", uuid))]
     PostNotFound { uuid: Uuid },
+
+    #[snafu(display("Failed in PostsRepository: {}", source))]
+    TagsRepoFailed { source: TagsError },
 }

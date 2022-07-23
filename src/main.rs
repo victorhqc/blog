@@ -6,6 +6,7 @@ mod aws;
 mod db;
 mod graphql;
 mod posts;
+mod tags;
 mod uploads;
 mod user;
 mod utils;

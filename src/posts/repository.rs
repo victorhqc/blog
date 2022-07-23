@@ -1,9 +1,12 @@
-use crate::utils::uuid::get_uuid_bytes;
+use crate::utils::{uuid::get_uuid_bytes, vec::vec_diff};
 use entity::{
     enums::Status,
     posts::{self, Entity as Post},
+    tags::{ActiveModel as TagsActiveModel, Column as TagColumn, Entity as TagEntity},
 };
-use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
+};
 use snafu::prelude::*;
 use uuid::Uuid;
 
@@ -11,6 +14,7 @@ pub struct NewPostInput {
     pub title: String,
     pub raw: String,
     pub html: String,
+    pub tags: Vec<String>,
     pub created_by: Uuid,
 }
 
@@ -19,6 +23,7 @@ pub struct UpdatePostInput {
     pub title: String,
     pub raw: String,
     pub html: String,
+    pub tags: Vec<String>,
 }
 
 pub struct ChangePostStatusInput {
@@ -45,11 +50,15 @@ impl PostsRepository {
 
         let last_insert_id = Uuid::from_bytes(get_uuid_bytes(&result.last_insert_id));
 
-        PostsRepository::find_by_id(conn, last_insert_id)
+        let post = PostsRepository::find_by_id(conn, last_insert_id)
             .await?
             .context(PostNotFoundSnafu {
                 uuid: last_insert_id,
-            })
+            })?;
+
+        PostsRepository::register_tags(conn, &post, input.tags).await?;
+
+        Ok(post)
     }
 
     pub async fn update_post(
@@ -66,6 +75,8 @@ impl PostsRepository {
         post.html = Set(input.html);
 
         let post: posts::Model = post.update(conn).await.context(QueryFailedSnafu)?;
+
+        PostsRepository::register_tags(conn, &post, input.tags).await?;
 
         Ok(post)
     }
@@ -86,6 +97,40 @@ impl PostsRepository {
         Ok(post)
     }
 
+    pub async fn register_tags(
+        conn: &DatabaseConnection,
+        post: &posts::Model,
+        tags: Vec<String>,
+    ) -> Result<()> {
+        let tags_ref: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
+
+        let existing_tags = TagEntity::find()
+            .filter(TagColumn::Name.is_in(tags_ref))
+            .all(conn)
+            .await
+            .context(TagsQueryFailedSnafu)?;
+
+        let existing_tag_names: Vec<String> =
+            existing_tags.iter().map(|tag| tag.name.clone()).collect();
+
+        let tags_to_create = vec_diff(tags, existing_tag_names);
+
+        let new_tags: Vec<TagsActiveModel> = tags_to_create
+            .into_iter()
+            .map(|t| TagsActiveModel {
+                name: Set(t),
+                ..Default::default()
+            })
+            .collect();
+
+        TagEntity::insert_many(new_tags)
+            .exec(conn)
+            .await
+            .context(TagsQueryFailedSnafu)?;
+
+        Ok(())
+    }
+
     pub async fn find_by_id(conn: &DatabaseConnection, uuid: Uuid) -> Result<Option<posts::Model>> {
         Post::find_by_id(uuid.as_bytes().to_vec())
             .one(conn)
@@ -104,6 +149,9 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 pub enum Error {
     #[snafu(display("Posts Query failed: {}", source))]
     QueryFailed { source: DbErr },
+
+    #[snafu(display("Tags Query failed: {}", source))]
+    TagsQueryFailed { source: DbErr },
 
     #[snafu(display("Post with uuid {} not found", uuid))]
     PostNotFound { uuid: Uuid },

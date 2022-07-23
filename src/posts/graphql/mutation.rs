@@ -16,6 +16,7 @@ use uuid::Uuid;
 pub struct NewPostInput {
     pub title: String,
     pub raw: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(InputObject)]
@@ -23,6 +24,7 @@ pub struct UpdatePostInput {
     pub uuid: ID,
     pub title: String,
     pub raw: String,
+    pub tags: Vec<String>,
 }
 
 #[derive(InputObject)]
@@ -47,6 +49,7 @@ impl PostsMutation {
             html: markdown(&input.raw),
             raw: input.raw,
             title: input.title,
+            tags: input.tags,
         };
 
         let post = PostsRepository::create(conn, input).await?;
@@ -69,6 +72,7 @@ impl PostsMutation {
             html: markdown(&input.raw),
             raw: input.raw,
             title: input.title,
+            tags: input.tags,
         };
 
         let post = PostsRepository::update_post(conn, input).await?;

@@ -30,7 +30,8 @@ pub struct UserRepository;
 
 impl UserRepository {
     pub async fn find_by_id(conn: &DatabaseConnection, id: Uuid) -> Result<Option<users::Model>> {
-        User::find_by_id(id.as_bytes().to_vec())
+        User::find()
+            .filter(users::Column::Uuid.eq(id))
             .one(conn)
             .await
             .context(QueryFailedSnafu)

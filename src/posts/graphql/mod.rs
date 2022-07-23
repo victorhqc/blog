@@ -71,7 +71,7 @@ impl TryFrom<posts::Model> for Post {
 
     fn try_from(post: posts::Model) -> Result<Self, Self::Error> {
         let uuid = Uuid::from_bytes(post.uuid());
-        let created_by = Uuid::from_bytes(post.uuid());
+        let created_by = Uuid::from_bytes(post.created_by());
         let status = Status::from_str(&post.status).context(InvalidStatusSnafu { uuid })?;
 
         Ok(Post {

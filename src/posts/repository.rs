@@ -1,8 +1,13 @@
 use crate::utils::{uuid::get_uuid_bytes, vec::vec_diff};
 use entity::{
     enums::Status,
+    post_tags::{
+        ActiveModel as PostTagsActiveModel, Column as PostTagsColumn, Entity as PostTagsEntity,
+    },
     posts::{self, Entity as Post},
-    tags::{ActiveModel as TagsActiveModel, Column as TagColumn, Entity as TagEntity},
+    tags::{
+        ActiveModel as TagsActiveModel, Column as TagColumn, Entity as TagEntity, Model as TagModel,
+    },
 };
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
@@ -97,15 +102,58 @@ impl PostsRepository {
         Ok(post)
     }
 
-    pub async fn register_tags(
+    pub async fn find_by_id(conn: &DatabaseConnection, uuid: Uuid) -> Result<Option<posts::Model>> {
+        Post::find_by_id(uuid.as_bytes().to_vec())
+            .one(conn)
+            .await
+            .context(QueryFailedSnafu)
+    }
+
+    pub async fn find_all(conn: &DatabaseConnection) -> Result<Vec<posts::Model>> {
+        Post::find().all(conn).await.context(QueryFailedSnafu)
+    }
+
+    async fn register_tags(
         conn: &DatabaseConnection,
         post: &posts::Model,
         tags: Vec<String>,
     ) -> Result<()> {
-        let tags_ref: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
+        // 1. Unattach the tags that are linked to the post.
+        PostTagsEntity::delete_many()
+            .filter(PostTagsColumn::PostUuid.eq(post.uuid.clone()))
+            .exec(conn)
+            .await
+            .context(TagsQueryFailedSnafu)?;
 
+        // 2. Find or create the given tags.
+        let tags_to_attach = PostsRepository::find_or_create_tags(conn, tags).await?;
+
+        // 3. Attach the tags to the Post
+        let tags_to_attach: Vec<PostTagsActiveModel> = tags_to_attach
+            .into_iter()
+            .map(|tag| PostTagsActiveModel {
+                post_uuid: Set(post.uuid.clone()),
+                tag_uuid: Set(tag.uuid),
+                ..Default::default()
+            })
+            .collect();
+
+        PostTagsEntity::insert_many(tags_to_attach)
+            .exec(conn)
+            .await
+            .context(TagsQueryFailedSnafu)?;
+
+        Ok(())
+    }
+
+    async fn find_or_create_tags(
+        conn: &DatabaseConnection,
+        tags: Vec<String>,
+    ) -> Result<Vec<TagModel>> {
+        // 1. Check wether the given tags need to be created or not to the DB
+        let tags_ref: Vec<&str> = tags.iter().map(|t| t.as_str()).collect();
         let existing_tags = TagEntity::find()
-            .filter(TagColumn::Name.is_in(tags_ref))
+            .filter(TagColumn::Name.is_in(tags_ref.clone()))
             .all(conn)
             .await
             .context(TagsQueryFailedSnafu)?;
@@ -113,8 +161,15 @@ impl PostsRepository {
         let existing_tag_names: Vec<String> =
             existing_tags.iter().map(|tag| tag.name.clone()).collect();
 
-        let tags_to_create = vec_diff(tags, existing_tag_names);
+        // 2.The tags that do not exist yet will be created.
+        let tags_to_create = vec_diff(tags.clone(), existing_tag_names);
 
+        // If there are no tags to create, it means we can skip the create part.
+        if tags_to_create.len() == 0 {
+            return Ok(existing_tags);
+        }
+
+        // 3. Insert the missing tags to the DB
         let new_tags: Vec<TagsActiveModel> = tags_to_create
             .into_iter()
             .map(|t| TagsActiveModel {
@@ -128,18 +183,12 @@ impl PostsRepository {
             .await
             .context(TagsQueryFailedSnafu)?;
 
-        Ok(())
-    }
-
-    pub async fn find_by_id(conn: &DatabaseConnection, uuid: Uuid) -> Result<Option<posts::Model>> {
-        Post::find_by_id(uuid.as_bytes().to_vec())
-            .one(conn)
+        // 4. Query for all the tags again, they now must exist in the DB
+        TagEntity::find()
+            .filter(TagColumn::Name.is_in(tags_ref))
+            .all(conn)
             .await
-            .context(QueryFailedSnafu)
-    }
-
-    pub async fn find_all(conn: &DatabaseConnection) -> Result<Vec<posts::Model>> {
-        Post::find().all(conn).await.context(QueryFailedSnafu)
+            .context(TagsQueryFailedSnafu)
     }
 }
 

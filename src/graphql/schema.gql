@@ -22,6 +22,7 @@ type FileUpload {
 	contentType: String!
 	createdAt: DateTime!
 	updatedAt: DateTime!
+	urls: Urls!
 }
 
 
@@ -100,6 +101,10 @@ input UpdatePostInput {
 }
 
 scalar Upload
+
+type Urls {
+	url: String!
+}
 
 type User {
 	uuid: ID!

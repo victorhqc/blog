@@ -1902,8 +1902,9 @@ dependencies = [
 
 [[package]]
 name = "markdown-to-html"
-version = "0.1.2"
-source = "git+https://github.com/victorhqc/prose?branch=master#97688bd1c967b8808cbd839899aac87626aed3ef"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cdec102a4362283b755dec77d4cfce3b5dd54e3523fd9a20524cfae46235aa1"
 dependencies = [
  "nom",
 ]

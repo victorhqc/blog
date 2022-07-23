@@ -34,10 +34,7 @@ impl TagsRepository {
 
         let post_tags = post_tags
             .into_iter()
-            .filter_map(|(tag, post)| match post {
-                Some(p) => Some((Uuid::from_bytes(p.uuid()), tag)),
-                None => None,
-            })
+            .filter_map(|(tag, post)| post.map(|p| (Uuid::from_bytes(p.uuid()), tag)))
             .fold(folded, |mut acc, (post_uuid, tag)| {
                 let index = acc.iter().position(|(uuid, _)| uuid == &post_uuid);
 
@@ -75,7 +72,7 @@ impl TagsRepository {
         let tags_to_create = vec_diff(tags.clone(), existing_tag_names);
 
         // If there are no tags to create, it means we can skip the create part.
-        if tags_to_create.len() == 0 {
+        if tags_to_create.is_empty() {
             return Ok(existing_tags);
         }
 

@@ -26,6 +26,7 @@ impl UploadQuery {
         }
     }
 
+    #[graphql(guard = "RoleGuard::new(Resource::File, Action::Read)")]
     pub async fn all_files(&self, ctx: &Context<'_>) -> Result<Vec<FileUpload>> {
         let conn = get_conn_from_context(ctx).await?;
 

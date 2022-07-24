@@ -1,11 +1,8 @@
 use async_trait::async_trait;
-use rocket::figment::{
-    providers::{Format, Serialized, Toml},
-    Figment,
-};
+use rocket::figment::{providers::Serialized, Figment};
 use sea_orm::ConnectOptions;
 use sea_orm_rocket::{Config, Database};
-use std::{env, fs, str, time::Duration};
+use std::{env, str, time::Duration};
 
 #[derive(Database, Debug)]
 #[database("blog_api")]
@@ -54,17 +51,11 @@ pub async fn build_pool(config: &Config) -> Result<SeaOrmPool, sea_orm::DbErr> {
 pub fn get_figment_before_build() -> Figment {
     let default_config = rocket::Config::default();
     let workers: usize = default_config.workers;
-
-    let rocket_bytes = include_bytes!("../../Rocket.toml");
-    let rocket_str = str::from_utf8(rocket_bytes).expect("Failed to load Rocket.toml");
-
-    let mut tmp_dir = env::temp_dir();
-    tmp_dir.push("Rocket_blog.toml");
-    fs::write(&tmp_dir, rocket_str).expect("Failed to write tmp Rocket file");
+    let url = env::var("DATABASE_URL").expect("DATABASE_URL IS NOT SET");
 
     Figment::from(default_config)
         .merge(Serialized::defaults(rocket::Config::default()))
-        .merge(Toml::file(&tmp_dir).nested())
+        .merge(Serialized::default("databases.blog_api.url", url))
         .focus("databases.blog_api")
         .merge(Serialized::default("max_connections", workers * 4))
         .merge(Serialized::default("connect_timeout", 5))

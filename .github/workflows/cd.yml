@@ -1,0 +1,83 @@
+name: Deploy Release
+
+on:
+    release:
+        types: [created]
+
+jobs:
+    build:
+        name: Build Binary
+        strategy:
+            matrix:
+                include:
+                    - target: x86_64-unknown-linux-gnu
+                      os: ubuntu-latest
+        runs-on: ${{ matrix.os }}
+
+        steps:
+            - uses: actions/checkout@v3
+              with:
+                  token: ${{ secrets.GH_ACTIONS_TOKEN }}
+            - uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: ${{ matrix.version }}-x86_64-unknown-linux-gnu
+                  profile: minimal
+                  override: true
+
+            - uses: Swatinem/rust-cache@v1
+
+            - name: Install Build Dependencies
+              run: sudo apt-get update && sudo apt-get install pkg-config libssl-dev
+
+            - name: Make & Upload Release to GH
+              uses: taiki-e/upload-rust-binary-action@v1
+              with:
+                  bin: blog-api
+                  zip: all
+                  target: ${{ matrix.target }}
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GH_ACTIONS_TOKEN }}
+
+    deploy:
+        needs: build
+        name: Deploy Binary
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@master
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+            - name: Download Binary
+              run: |
+                  cd ./scripts/
+                  node --experimental-fetch ./download_binary.js
+              shell: bash
+              env:
+                  GH_REPO: ${{ github.api_url }}/repos/${{ github.repository }}
+                  GH_TAGS: ${{ github.api_url }}/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}
+                  TOKEN: ${{ secrets.GH_ACTIONS_TOKEN }}
+            - name: Create SSH key
+              run: |
+                  mkdir -p ~/.ssh/
+                  echo "$SSH_PRIVATE_KEY" > ../private.key
+                  sudo chmod 600 ../private.key
+                  host='api.victorhqc.com'
+                  hosts="$(dig +short "$host" | grep -v '\.$' | sed -z 's|\n|,|g')$host"
+                  ssh-keyscan -H "$hosts" > ~/.ssh/known_hosts
+              shell: bash
+              env:
+                  SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
+                  SSH_KNOWN_HOSTS: ${{secrets.SSH_KNOWN_HOSTS}}
+                  SSH_KEY_PATH: ${{ github.workspace }}/../private.key
+            - name: Upload Binary
+              run: |
+                  scp -i ${{ env.SSH_KEY_PATH }} ./api_blog.zip github@api.victorhqc.com:/home/github
+              shell: bash
+              env:
+                  SSH_KEY_PATH: ${{ github.workspace }}/../private.key
+            - name: Commit Deploy
+              run: |
+                  ssh -i ${{ env.SSH_KEY_PATH }} github@api.victorhqc.com 'unzip -o api_blog.zip | sudo systemctl restart api.julieyvic.com'
+              shell: bash
+              env:
+                  SSH_KEY_PATH: ${{ github.workspace }}/../private.key

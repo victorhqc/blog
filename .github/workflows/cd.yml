@@ -20,9 +20,7 @@ jobs:
                   token: ${{ secrets.GH_ACTIONS_TOKEN }}
             - uses: actions-rs/toolchain@v1
               with:
-                  toolchain: ${{ matrix.version }}-x86_64-unknown-linux-gnu
-                  profile: minimal
-                  override: true
+                  toolchain: stable
 
             - uses: Swatinem/rust-cache@v1
 
